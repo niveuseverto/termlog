@@ -1,0 +1,177 @@
+.ig
+man page for termlog
+..
+.ie t .ds tx T\h'-.1667m'\v'.224m'E\v'-.224m'\h'-.125m'X
+.el .ds tx TeX
+.
+.de TQ
+.br
+.ns
+.TP \\$1
+..
+.
+.\" Like TP, but if specified indent is more than half
+.\" the current line-length - indent, use the default indent.
+.de Tp
+.ie \\n(.$=0:((0\\$1)*2u>(\\n(.lu-\\n(.iu)) .TP
+.el .TP "\\$1"
+..
+.
+.\" The BSD man macros can't handle " in arguments to font change macros,
+.\" so use \(ts instead of ".
+.tr \(ts"
+.
+.TH TERMLOG 1 "11 August 2002" "termlog version 2.0.0"
+.
+.SH NAME
+.
+.
+termlog \- terminal I/O and key logger
+.
+.SH SYNOPSIS
+.
+.
+.nr a \n(.j
+.ad l
+.nr i \n(.i
+.in +\w'\fBtermlog  'u
+.ti \niu
+.B termlog\ 
+.de OP
+.ie \\n(.$-1 .RI "[\ \fB\\$1\fP" "\\$2" "\ ]"
+.el .RB "[\ " "\\$1" "\ ]"
+..
+.OP \-afv
+.OP \-C\ dir
+.OP \-c\ count
+.OP \-d\ path
+.OP \-i\ interval
+.OP \-n\ count
+.OP \-t\ tty
+.OP \-u\ username
+.
+.SH DESCRIPTION
+.
+.
+This manual describes the operating procedure for the
+.BR termlog
+terminal I/O and key logging program.
+.BR termlog
+is capable of performing synchronous monitoring 
+and logging of multiple system ttys. It is designed to allow
+paranoid or otherwise curious system administrators to monitor
+I/O between the local host machine and remote users; regardless
+of the protocol medium used.
+.PP
+.BR termlog
+is dependent on the existence of the
+.BR snp(4)
+device. This device must be either compiled into the kernel or
+have a module loaded. If the existence of the device is not present
+in the kernel,
+.BR termlog
+will attempt to load the module itself. Unless otherwise specified,
+.BR termlog
+will attempt to open all active ttys.
+.
+.
+.SH OPTIONS
+.
+.
+.TP \w'\-dname=s'u+2n
+.B \-a
+When creating log files, set the SF_APPEND file flag. This will
+make the file "append only". If the security level is set high
+enough, this could offer additional security for log files.
+.TP
+.BI \-C\ dir
+Change directory to
+.B dir
+and create log files there instead of the current working directory.
+.TP
+.BI \-c\ count
+Rotate log files after
+.IR count
+bytes have been logged to it.
+.TP
+.BI \-d\ path
+Instead of using /, process tty specifications from alternate root
+referenced by
+.B path .
+This option may be usefull when wanting to attach to
+terminals in various prisons.
+.TP
+.B \-f
+Dynamically create snp(4) devices as required. Note that this option
+is not required in FreeBSD 5.x because of devfs.
+.TP
+.BI \-i\ interval
+stat interval of utmp in micro seconds. This setting will determine
+how often termlog will check the utmp database for changes.
+.TP
+.BI \-n\ count
+Open at max
+.IR count
+snp devices. This value defaults to 50. If termlog opens 
+.IR count
+snp devices,
+all following terminal sessions will be ignored until an snp device
+becomes free.
+.TP
+.BI \-t\ tty
+Only open the specified tty line for monitoring. This option can
+be used more than once.
+.TP
+.BI \-u\ login
+Monitor terminals owned by
+.B user .
+This specification must be a login name.
+.TP
+.B \-v
+Produce a more verbose output. This option is generally reserved
+for programmers who want to debug the program.
+.
+.
+.SH EXAMPLES
+.
+.
+.IP "\fBtermlog -t ttyp1 -t ttyp2 -t ttyp3"
+Open the 3 terminals: ttyp1 ttyp2 ttyp3 for monitoring.
+.IP "\fBtermlog -f -n 20"
+Open all active system terminals, if there are more active terminals then
+.B snp
+devices, then create a maximum of 20 snp devices.
+.IP "\fBtermlog -u cperon"
+Monitor all active terminals on the system which belong to the user
+"cperon".
+.
+.
+.SH "SEE ALSO"
+.
+.
+watch(8), lsof(8), snp(4), ps(1), pty(4), kldload(8)
+.
+.
+.SH AUTHOR
+.
+.
+The
+.B termlog
+program was written by Chris S.J. Peron for
+Seccuris Inc.
+.IR http://www.seccuris.com
+who contributed it to FreeBSD.
+.SH BUGS
+The version of
+.B snp(4)
+that ships FreeBSD
+.B PRIOR
+to release 4.6 is not capable of multiple snoop devices.
+This was fixed in revision
+.B 1.46
+(2000/04/02) of the snoop device driver. Thus termlog would be
+capable of monitoring only one terminal.
+.IR Credits:
+Chris Wasser <cwasser@shaw.ca>
+.PP
+Send bugs or source code patches to (bugs@sqrt.ca)
