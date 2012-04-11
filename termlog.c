@@ -38,7 +38,8 @@
 #include <sys/filio.h>
 #include <sys/mman.h>
 
-#include <utmp.h>
+#include <utmpx.h>
+#include "utmp.h"
 #include <signal.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -107,7 +108,6 @@ build_snp_device(int minor)
 {
 	char devpath[MAXPATHLEN];
 	dev_t dev;
-
 	snprintf(devpath, sizeof(devpath) - 1,
 	    "%s/snp%d", _PATH_DEV, minor);
 	dev = makedev(_SNP_MAJOR, minor);
@@ -154,7 +154,7 @@ catchusr(int sig __unused)
 }
 
 int
-skipcrtltty(struct utmp *utmp)
+skipcrtltty(struct utmpx *utmp)
 {
 	if (vflag == 0)
 		return (0);
@@ -291,6 +291,7 @@ watchutmp(void *arg __unused)
 	snprintf(path, sizeof(path) - 1,
 	    "%s%s", rootfs, _PATH_UTMP);
 	mtime = 0;
+
 	fd = open(path, O_RDONLY);
 	if (fd < 0)
 		err(1, "open utmp failed");
@@ -384,7 +385,7 @@ snpattach(char *tty_line)
 }
 
 int
-ttyislinked(struct utmp *utmp)
+ttyislinked(struct utmpx *utmp)
 {
 	struct snp_d *s;
 
@@ -402,7 +403,7 @@ ttyislinked(struct utmp *utmp)
 }
 
 int
-linktty(struct utmp *utmp)
+linktty(struct utmpx *utmp)
 {
 	struct snp_d *s;
 	int len, fd;
@@ -415,8 +416,8 @@ linktty(struct utmp *utmp)
 	if (s == NULL)
 		goto error;
 	DEBUG(vflag, "building snoop session for user %s",
-	    utmp->ut_name);
-	if ((len = strlcpy(s->s_username, utmp->ut_name,
+	    utmp->ut_user);
+	if ((len = strlcpy(s->s_username, utmp->ut_user,
 	    UT_NAMESIZE)) > usrwidth)
 		usrwidth = len;
 	strlcpy(s->s_line, utmp->ut_line, UT_LINESIZE);
@@ -454,7 +455,7 @@ ttystat(char *line, int size)
 }
 
 int
-checkuserlist(struct utmp *utmp)
+checkuserlist(struct utmpx *utmp)
 {
 	char *user;
 	char **ulist;
@@ -464,13 +465,13 @@ checkuserlist(struct utmp *utmp)
 	if (*ulist == NULL)
 		return (1);
 	while ((user = *ulist++))
-		if (strcmp(utmp->ut_name, user) == 0)
+		if (strcmp(utmp->ut_user, user) == 0)
 			return (1);
 	return (0);
 }
 
 int
-checkttylist(struct utmp *utmp)
+checkttylist(struct utmpx *utmp)
 {
 	char *tty;
 	char **tlist;
@@ -495,37 +496,10 @@ checkttylist(struct utmp *utmp)
 int
 processutmp(struct stat *sb)
 {
-	static int fd, n, usize;
-	static caddr_t memmap;
-	struct utmp *utmp, *up;
-	int i;
-	char path[MAXPATHLEN];
+	struct utmpx *up;
 
-	if (fd == 0) {
-		snprintf(path, sizeof(path) - 1,
-		    "%s%s", rootfs, _PATH_UTMP);
-		if ((fd = open(path, O_RDONLY)) < 0)
-			err(1, "%s", path);
-	}
-	if (usize != sb->st_size) {
-		DEBUG(vflag,
-		    "creating memory mmap of utmp file %qu bytes %d bytes per record",
-		    sb->st_size, sizeof(struct utmp));
-		if ((sb->st_size % sizeof(struct utmp)) != 0)
-			errx(1, "mutilated record in utmp database");
-		if (memmap != NULL)
-			if (munmap(memmap, usize) < 0)
-				err(1, "munmap failed");
-		if ((memmap = mmap(0, sb->st_size, PROT_READ, MAP_FILE |
-		    MAP_SHARED, fd, 0)) < 0)
-			err(1, "mmap failed");
-		usize = sb->st_size;
-		n = sb->st_size / sizeof(struct utmp);
-	}
-	utmp = (struct utmp *)memmap;
-	for (i = 0; i < n; i++) {
-		up = &utmp[i];
-		if (*up->ut_name == '\0' || skipcrtltty(up) ||
+	while (up = getutxent()) {
+		if (up->ut_user == '\0' || skipcrtltty(up) ||
 		    !ttystat(up->ut_line, UT_LINESIZE) ||
 		    !checkttylist(up) || !checkuserlist(up) || ttyislinked(up))
 			continue;

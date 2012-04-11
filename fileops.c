@@ -35,7 +35,7 @@
 #include <sys/time.h>
 #include <sys/filio.h>
 
-#include <utmp.h>
+#include <utmpx.h>
 #include <signal.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -51,6 +51,7 @@
 #include <assert.h>
 #include <sha.h>
 
+#include "utmp.h"
 #include "termlog.h"
 #include "fileops.h"
 
@@ -92,6 +93,7 @@ snp_setup(void *m_data, char *config __unused)
 	snprintf(logname, sizeof(logname) - 1,
 	    "%s_%s_%d.log", snp->s_username,
 	    snp->s_line, time(0));
+	while(index(logname,'/')) *(index(logname,'/')) = '_';
 	sm->fp = fopen(logname, "w");
 	if (sm->fp == NULL)
 		return (NULL);
